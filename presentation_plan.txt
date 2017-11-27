@@ -1,0 +1,11 @@
+
+go over what we did
+what worked what didnt, why didn't it work
+
+What data we need:
+- simple tests
+- zipf-biased L 1 out word test
+- uniform L 1 out word test
+- sentence L 1 out test
+- add random language into set of languages
+- throw some random sentences at the model

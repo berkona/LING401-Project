@@ -1,49 +1,52 @@
 
 import nltk, random
 
-from nltk.corpus import udhr
-
 import pandas as pd
 
+from nltk.corpus import udhr
 
 LANGUAGES = [ 
-	"English-Latin1", 
-	"French_Francais-Latin1",
-	"Spanish-Latin1",
-	"Italian-Latin1",
-	"German_Deutsch-Latin1"
+    "English-Latin1", 
+    "French_Francais-Latin1",
+    "Spanish-Latin1",
+    "Italian-Latin1",
+    "German_Deutsch-Latin1"
 ]
 
 
-def wordProb(word, grammar):
-	assert word.isalpha()
+def makeTrigrams(words):
+    return nltk.trigrams("$$" + "$$".join((w.lower() for w in words if w.isalpha() )) + "$$")
 
-	word = word.lower() + '$'
-	p = 1.0
-	last_char = '$'
-	for i in range(len(word)):
-		p += grammar[last_char].freq(word[i])
-		last_char = word[i]
-	return p / len(word)
+
+def createTrigramGrammar(trigrams):
+    conditions = ( ((a, b), c) for a, b, c in trigrams )
+    return nltk.ConditionalFreqDist(conditions)
+
+
+def wordProb(word, grammar):
+    assert word.isalpha() and len(word) > 0
+    word = "$$" + word.lower() + "$$"
+    
+    p = 1.0
+    for a, b, c in nltk.trigrams(word):
+        p += grammar[(a, b)].freq(c)
+    return p / len(word)
 
 
 def predictLanguage(word, grammars):
-	return [ ( wordProb(word, grammar), lang ) for lang, grammar in grammars ]
+    return [ ( wordProb(word, grammar), lang ) for lang, grammar in grammars ]
 
 
 def predictSentLanguage(sent, grammars):
-	return [ ( sum([ wordProb(word, grammar) for word in sent ]) / len(sent), lang ) for lang, grammar in grammars ] 
+    return [ ( sum([ wordProb(word, grammar) for word in sent ]) / len(sent), lang ) for lang, grammar in grammars ] 
 
 
-def makeBigramGrammars(all_bigrams):
-	return [
-		( lang, nltk.ConditionalFreqDist(bigrams) )
-		for lang, bigrams in all_bigrams
-	]
+def makeTrigramGrammars(trigrams):
+	return [ (lang, createTrigramGrammar(trigrams)) for lang, trigrams in trigrams ]
 
 
-def makeBigrams(words):
-	return nltk.bigrams( "$" + "$".join(w.lower() for w in words if w.isalpha()) + "$" )
+all_trigrams = [ (lang, makeTrigrams(udhr.words(lang))) for lang in LANGUAGES ]
+trigram_grammars = makeTrigramGrammars(all_trigrams)
 
 
 def filterWords(words):
@@ -55,13 +58,13 @@ def runLeaveOutWordTrial(language):
 	test_set = random.choice(all_words)
 	train_set = [ w for w in all_words if w not in test_set ]
 
-	bigrams = [ (language, makeBigrams(train_set)) ]
+	bigrams = [ (language, makeTrigrams(train_set)) ]
 	for lang in LANGUAGES:
 		if lang == language:
 			continue
-		bigrams.append( ( lang, makeBigrams(udhr.words(lang)) ) )
+		bigrams.append( ( lang, makeTrigrams(udhr.words(lang)) ) )
 
-	grammars = makeBigramGrammars(bigrams)
+	grammars = makeTrigramGrammars(bigrams)
 	
 	return [ test_set ], predictLanguage(test_set, grammars)
 
@@ -71,13 +74,13 @@ def runLeaveOutWordTrialUnbiased(language):
 	test_set = random.choice(all_words)
 	train_set = [ w for w in all_words if w not in test_set ]
 
-	bigrams = [ (language, makeBigrams(train_set)) ]
+	bigrams = [ (language, makeTrigrams(train_set)) ]
 	for lang in LANGUAGES:
 		if lang == language:
 			continue
-		bigrams.append( ( lang, makeBigrams(udhr.words(lang)) ) )
+		bigrams.append( ( lang, makeTrigrams(udhr.words(lang)) ) )
 
-	grammars = makeBigramGrammars(bigrams)
+	grammars = makeTrigramGrammars(bigrams)
 	
 	return [ test_set ], predictLanguage(test_set, grammars)
 
@@ -92,13 +95,13 @@ def runLeaveOutSentTrial(language):
 			continue
 		train_set += filterWords(sents[i])
 
-	bigrams = [ (language, makeBigrams(train_set)) ]
+	bigrams = [ (language, makeTrigrams(train_set)) ]
 	for lang in LANGUAGES:
 		if lang == language:
 			continue
-		bigrams.append( ( lang, makeBigrams(udhr.words(lang)) ) )
+		bigrams.append( ( lang, makeTrigrams(udhr.words(lang)) ) )
 
-	grammars = makeBigramGrammars(bigrams)
+	grammars = makeTrigramGrammars(bigrams)
 	
 	return test_sent, predictSentLanguage(test_sent, grammars)
 
@@ -119,10 +122,6 @@ def accuracy(results):
 	return results[correct].groupby('Expected')['Expected'].count() / n
 
 
-all_bigrams = [ ( lang, makeBigrams(udhr.words(lang)) ) for lang in LANGUAGES ]
-bigram_grammars = makeBigramGrammars(all_bigrams)
-
-
 def lengthTrial():
 	results = pd.DataFrame(columns=['Language', 'Length', 'Accuracy'])
 	for lang in LANGUAGES:
@@ -133,7 +132,7 @@ def lengthTrial():
 		for l, words in words_by_length.items():
 			correct = 0
 			for w in words:
-				result = predictLanguage(w, bigram_grammars)
+				result = predictLanguage(w, trigram_grammars)
 				prediction = max(result)[1]
 				correct += 1 if prediction == lang else 0
 			accuracy = correct / len(words)
@@ -143,22 +142,22 @@ def lengthTrial():
 
 def main():
 	length_results = lengthTrial()
-	length_results.to_csv('bigram_length_trial.csv', index_label="index")
+	length_results.to_csv('length_trial.csv', index_label="index")
 
 	biased_results = runTrial(runLeaveOutWordTrial)
 	biased_accuracy = accuracy(biased_results)
 	print(biased_accuracy)
-	biased_results.to_csv('bigram_biased_trial.csv', index_label="index")
+	biased_results.to_csv('biased_trial.csv', index_label="index")
 
 	unbiased_results = runTrial(runLeaveOutWordTrialUnbiased)
 	unbiased_accuracy = accuracy(unbiased_results)
 	print(unbiased_accuracy)
-	unbiased_results.to_csv('bigram_unbiased_trial.csv', index_label="index")
+	unbiased_results.to_csv('unbiased_trial.csv', index_label="index")
 
 	sent_results = runTrial(runLeaveOutSentTrial)
 	sent_accuracy = accuracy(sent_results)
 	print(sent_accuracy)
-	sent_results.to_csv('bigram_sent_trial.csv', index_label="index")
+	sent_results.to_csv('sent_trial.csv', index_label="index")
 
 
 if __name__ == '__main__':
