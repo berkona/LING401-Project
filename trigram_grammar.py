@@ -142,22 +142,22 @@ def lengthTrial():
 
 def main():
 	length_results = lengthTrial()
-	length_results.to_csv('length_trial.csv', index_label="index")
+	length_results.to_csv('trigram_results/length_trial.csv', index_label="index")
 
 	biased_results = runTrial(runLeaveOutWordTrial)
 	biased_accuracy = accuracy(biased_results)
 	print(biased_accuracy)
-	biased_results.to_csv('biased_trial.csv', index_label="index")
+	biased_results.to_csv('trigram_results/biased_trial.csv', index_label="index")
 
 	unbiased_results = runTrial(runLeaveOutWordTrialUnbiased)
 	unbiased_accuracy = accuracy(unbiased_results)
 	print(unbiased_accuracy)
-	unbiased_results.to_csv('unbiased_trial.csv', index_label="index")
+	unbiased_results.to_csv('trigram_results/unbiased_trial.csv', index_label="index")
 
 	sent_results = runTrial(runLeaveOutSentTrial)
 	sent_accuracy = accuracy(sent_results)
 	print(sent_accuracy)
-	sent_results.to_csv('sent_trial.csv', index_label="index")
+	sent_results.to_csv('trigram_results/sent_trial.csv', index_label="index")
 
 
 if __name__ == '__main__':
