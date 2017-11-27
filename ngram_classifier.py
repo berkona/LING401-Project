@@ -16,6 +16,7 @@ class NGramClassifier(object):
 		return [ ( self._wordProb(word, grammar), lang ) for lang, grammar in self._grammars ]
 
 	def classifySent(self, sent):
+		sent = [ word for word in sent if word.isalpha() ]
 		return [ ( sum([ self._wordProb(word, grammar) for word in sent ]) / len(sent), lang ) for lang, grammar in self._grammars ] 
 
 	def _wordProb(self, word, grammar):
