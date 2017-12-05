@@ -24,7 +24,7 @@ def filterWords(words):
 def runLeaveOutWordTrial(language):
 	all_words = list(filterWords(udhr.words(language)))
 	test_set = random.choice(all_words)
-	train_set = [ w for w in all_words if w not in test_set ]
+	train_set = [ w for w in all_words if w != test_set ]
 
 	ngrams = [ ( language, train_set ) ]
 	for lang in LANGUAGES:
@@ -40,7 +40,7 @@ def runLeaveOutWordTrial(language):
 def runLeaveOutWordTrialUnbiased(language):
 	all_words = list(set(filterWords(udhr.words(language))))
 	test_set = random.choice(all_words)
-	train_set = [ w for w in all_words if w not in test_set ]
+	train_set = [ w for w in all_words if w != test_set ]
 
 	ngrams = [ ( language, train_set ) ]
 	for lang in LANGUAGES:
