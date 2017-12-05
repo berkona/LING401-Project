@@ -7,6 +7,10 @@ import pandas as pd
 
 from ngram_classifier import NGramClassifier
 
+"""
+NOTE: See bigram_trial for documentation on all these functions
+"""
+
 LANGUAGES = [ 
 	"English-Latin1", 
 	"French_Francais-Latin1",

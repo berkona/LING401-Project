@@ -5,7 +5,7 @@ from nltk.corpus import udhr
 
 import pandas as pd
 
-
+# what languages to look at
 LANGUAGES = [ 
 	"English-Latin1", 
 	"French_Francais-Latin1",
@@ -16,6 +16,9 @@ LANGUAGES = [
 
 
 def wordProb(word, grammar):
+	"""
+	This is our actual metric implemented on a word basis
+	"""
 	assert word.isalpha()
 
 	word = word.lower() + '$'
@@ -28,14 +31,23 @@ def wordProb(word, grammar):
 
 
 def predictLanguage(word, grammars):
+	"""
+	A driver method for 1 word and all bigram grammars
+	"""
 	return [ ( wordProb(word, grammar), lang ) for lang, grammar in grammars ]
 
 
 def predictSentLanguage(sent, grammars):
+	"""
+	A driver method for a sentence and all bigram grammars 
+	"""
 	return [ ( sum([ wordProb(word, grammar) for word in sent ]) / len(sent), lang ) for lang, grammar in grammars ] 
 
 
 def makeBigramGrammars(all_bigrams):
+	"""
+	Construct a bigram grammar from a set of (lang, bigrams)
+	"""
 	return [
 		( lang, nltk.ConditionalFreqDist(bigrams) )
 		for lang, bigrams in all_bigrams
@@ -43,14 +55,23 @@ def makeBigramGrammars(all_bigrams):
 
 
 def makeBigrams(words):
+	"""
+	This takes a text and creates all case-insentive bigrams for all alphabetic words in the given text
+	"""
 	return nltk.bigrams( "$" + "$".join(w.lower() for w in words if w.isalpha()) + "$" )
 
 
 def filterWords(words):
+	"""
+	Just a helper function
+	"""
 	return ( w for w in words if w.isalpha() )
 
 
 def runLeaveOutWordTrial(language):
+	"""
+	Choses a single word to exclude from the tokens of the UDHR and then tests against that
+	"""
 	all_words = list(filterWords(udhr.words(language)))
 	test_set = random.choice(all_words)
 	train_set = [ w for w in all_words if w not in test_set ]
@@ -67,6 +88,9 @@ def runLeaveOutWordTrial(language):
 
 
 def runLeaveOutWordTrialUnbiased(language):
+	"""
+	Choses a single word to exclude from the types of the UDHR and then tests against that
+	"""
 	all_words = list(set(filterWords(udhr.words(language))))
 	test_set = random.choice(all_words)
 	train_set = [ w for w in all_words if w not in test_set ]
@@ -83,6 +107,9 @@ def runLeaveOutWordTrialUnbiased(language):
 
 
 def runLeaveOutSentTrial(language):
+	"""
+	Choses a sentence to exclude from the UDHR and then tests against that
+	"""
 	sents = udhr.sents(language)
 	sent_idx = random.randint(0, len(sents)-1)
 	test_sent = list(filterWords(sents[sent_idx]))
@@ -104,6 +131,9 @@ def runLeaveOutSentTrial(language):
 
 
 def runTrial(trialFn, n=100):
+	"""
+	Run a 'trial' some number of times (defaults to 100) and then return a DataFrame with full results
+	"""
 	results = pd.DataFrame(columns=[ 'Test Set', 'Expected', 'Actual', ] + LANGUAGES)
 	for i in range(n):
 		for lang in LANGUAGES:
@@ -114,6 +144,9 @@ def runTrial(trialFn, n=100):
 
 
 def accuracy(results):
+	"""
+	Helper to get accuracy from the results DataFrame
+	"""
 	n = results.groupby('Expected')['Expected'].count()[0]
 	correct = results['Expected'] == results['Actual']
 	return results[correct].groupby('Expected')['Expected'].count() / n
@@ -124,6 +157,9 @@ bigram_grammars = makeBigramGrammars(all_bigrams)
 
 
 def lengthTrial():
+	"""
+	A seperate trial that sorts all the words by length and then examines the accuracy on a per-length basis
+	"""
 	results = pd.DataFrame(columns=['Language', 'Length', 'Accuracy'])
 	for lang in LANGUAGES:
 		words_by_length = {}
@@ -142,6 +178,9 @@ def lengthTrial():
 
 
 def main():
+	"""
+	Run all trials and save to csv files
+	"""
 	length_results = lengthTrial()
 	length_results.to_csv('bigram_results/length_trial.csv', index_label="index")
 
